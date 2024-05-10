@@ -1,0 +1,18 @@
+{
+    "source": {
+        "include": ["server/assistantUtils.js", "server/routes.js", "client/src/App.js", "client/src/pages"],
+        "includePattern": ".js$",
+        "excludePattern": ".test.js$"
+    },
+    "plugins": [
+        "plugins/markdown"
+    ],
+    "templates": {
+        "cleverLinks": true,
+        "monospaceLinks": true
+    },
+    "opts" : {
+        "destination": "./docs/",
+        "recurse": true
+    }
+}

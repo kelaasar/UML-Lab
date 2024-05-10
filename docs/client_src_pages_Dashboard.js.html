@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: client/src/pages/Dashboard.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: client/src/pages/Dashboard.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @module client/dashboard
+ * @description Provides the Dashboard component class
+ */
+
+import React, { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
+import Container from '@mui/material/Container';
+import Masonry from '@mui/lab/Masonry';
+import { useMediaQuery } from '@mui/material';
+import Card from '@mui/material/Card';
+import CardHeader from '@mui/material/CardHeader';
+import CardMedia from '@mui/material/CardMedia';
+import ButtonGroup from '@mui/material-next/ButtonGroup';
+import Button from '@mui/material/Button';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DownloadIcon from '@mui/icons-material/Download';
+import axios from 'axios';
+
+import Diagram_img from '../images/Not-Found.svg'
+import NavBar from './NavBar';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useNavigate } from 'react-router-dom';
+import { setUML } from '../redux/uml';
+import { useDispatch, useSelector } from 'react-redux';
+
+/**
+ * The UserDiagrams component features the user's UML diagrams, with the option to edit, download, or delete them.
+ * @memberof module:client/dashboard
+ */
+const UserDiagrams = () => {
+    const isSmallScreen = useMediaQuery('(max-width:600px)');
+    const columns = isSmallScreen ? 1 : 3;
+    const navigate = useNavigate();
+    const [loaded, setLoaded] = useState(false);
+    const [userUML, setUserUML] = useState([]);
+    const dispatch = useDispatch();
+    const { uid } = useSelector((state) => state.user);
+
+    const handleEditClick = (event, UML) => {
+        dispatch(setUML(UML.uml_id));
+        navigate("/query", {state: UML});   
+    };
+
+    const handleDownloadClick = (event, UML) => {
+        const umlContent = UML.content;
+
+        const blob = new Blob([umlContent], { type: 'text/plain' });
+    
+        const url = window.URL.createObjectURL(blob);
+    
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${UML.name}.txt`; 
+        document.body.appendChild(link);
+        link.click();
+    
+        // Clean up the URL
+        window.URL.revokeObjectURL(url);
+    };
+
+    const handleDeleteClick = async (event, UML) => {
+        const body = {
+            uid: uid,
+            uml_id: UML.uml_id
+        };
+        try {
+            await axios.post('http://localhost:4000/delete-uml', body);
+            const newUserUML = userUML.filter(uml => uml.uml_id !== UML.uml_id);
+            setUserUML(newUserUML);
+        }
+        catch(error)
+        {
+        }
+    };
+
+    useEffect(() => {
+        async function loadUML() {
+            const body = {
+                uid: uid
+            };
+            try {
+                const res = await axios.post('http://localhost:4000/get-user-uml', body);
+                setUserUML(res.data);
+                setLoaded(true);
+            }
+            catch(error) {
+            }
+        }
+
+        if (!loaded) {
+            loadUML();
+        }
+    });
+
+    if (!loaded) {
+        return (&lt;div className="loaderlong" />);
+    }
+
+    return (
+        &lt;Masonry columns={columns} spacing={2}>
+            {userUML.map((UML, index) => (
+                &lt;Card key={index} sx={{ p: 1 }}>
+                    &lt;CardMedia 
+                        sx={{ height: 180, objectFit: "contain"}}
+                        component="img"
+                        image={UML.diagram ? UML.diagram : Diagram_img}
+                        scale='20'
+                        title='UML Diagram' 
+                    /> 
+                    &lt;ButtonGroup>
+                        &lt;Button variant='filled' onClick={event => handleEditClick(event, UML)} startIcon={&lt;EditIcon />}>
+                            Edit
+                        &lt;/Button>
+                        &lt;Button variant='filled' onClick={event => handleDownloadClick(event, UML)} startIcon={&lt;DownloadIcon />}>
+                            Download
+                        &lt;/Button>
+                        &lt;Button variant='filled' onClick={event => handleDeleteClick(event, UML)} startIcon={&lt;DeleteIcon />}>
+                            Delete
+                        &lt;/Button>
+                    &lt;/ButtonGroup>
+                    &lt;Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                        }}
+                    >
+                        &lt;CardHeader
+                            title={UML.name}
+                            subheader={UML.description}
+                        />
+                    &lt;/Box>
+                &lt;/Card>
+            ))}
+        &lt;/Masonry>
+    );
+};
+
+/**
+ * The Dashboard component allows users to create a new UML diagram, and also contains UserDiagrams.
+ * @memberof module:client/dashboard
+ */
+const Dashboard = () => {
+    const navigate = useNavigate();
+
+    const handleCreateClick = () => {
+        navigate('/query');
+    };
+
+    return (
+        &lt;div>
+            &lt;NavBar />
+            &lt;Container                 
+                sx={{
+                    pt: "7rem",
+                    pb: "5rem",
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: { xs: 3, sm: 6 },
+                }}
+            >
+                &lt;Box>
+                    &lt;Button onClick={handleCreateClick} variant='outlined' startIcon={&lt;AddIcon />}>
+                        Create
+                    &lt;/Button>
+                &lt;/Box>
+                &lt;UserDiagrams />
+            &lt;/Container>
+        &lt;/div>
+    );
+};
+
+export default Dashboard;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-client_app.html">client/app</a></li><li><a href="module-client_dashboard.html">client/dashboard</a></li><li><a href="module-client_home.html">client/home</a></li><li><a href="module-client_login.html">client/login</a></li><li><a href="module-client_navbar.html">client/navbar</a></li><li><a href="module-client_query.html">client/query</a></li><li><a href="module-client_signup.html">client/signup</a></li><li><a href="module-server_assistantUtils.html">server/assistantUtils</a></li><li><a href="module-server_routes.html">server/routes</a></li></ul><h3>Namespaces</h3><ul><li><a href="module-server_assistantUtils-AssistantUtils.html">AssistantUtils</a></li><li><a href="module-server_routes-Router.html">Router</a></li></ul><h3>Classes</h3><ul><li><a href="module-client_app.App.html">App</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.11</a> on Wed Mar 13 2024 22:11:16 GMT-0700 (Pacific Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

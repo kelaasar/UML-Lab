@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: server/assistantUtils.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: server/assistantUtils.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @module server/assistantUtils
+ * @description This module provides utility for interacting with OpenAI assistants.
+ */
+
+const OpenAI = require("openai");
+require('dotenv').config({ path: './.env' });
+
+/**
+ * OpenAI assistant utility functions
+ * @type {object}
+ * @const
+ * @namespace AssistantUtils
+ */
+const AssistantUtils = {
+    /**
+     * Prompts OpenAI assistant to respond
+     * @function
+     * @memberof module:server/assistantUtils~AssistantUtils
+     * @param {string} assistant_id - ID of the OpenAI assistant to call
+     * @param {string} prompt - message to send to assistant
+     * @returns {Promise&lt;string>} - response message of assistant
+     */
+    async prompt_assistant(assistant_id, prompt) {
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+        // Create new thread with prompt
+        const thread = await openai.beta.threads.create({
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ]
+        });
+    
+        // Run assistant on thread
+        const run = await openai.beta.threads.runs.create(
+            thread.id,
+            { assistant_id: assistant_id }
+        )
+    
+        // Wait for run to complete
+        let status;
+        do {
+            const run_status = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+            status = run_status.status;
+        } while (status === 'queued' || status === 'in_progress');
+    
+        // Check final status of run
+        if (status !== 'completed') {
+            // Return status as error
+            throw { status: status, message: 'Run finished with status other than "complete".' };
+        }
+    
+        // Return last message from assistant
+        const messages = await openai.beta.threads.messages.list(thread.id);
+        return messages.data.filter(message => message.role === 'assistant').pop().content[0].text.value;
+    },
+    
+    /**
+     * Wrapper for prompt_assistant, which handles error results of prompting the assistant, including a timeout
+     * @function
+     * @memberof module:server/assistantUtils~AssistantUtils
+     * @param {string} assistant_id - ID of the OpenAI assistant to call
+     * @param {string} prompt - message to send to assistant
+     * @param {string} timeout - time in milliseconds to wait for assistant response before timing out
+     * @returns {Promise&lt;string>} - response message of the assistant
+     * @throws {{status: int, to_send: {type: string, message: string}}} - HTTP error status, along with HTTP error response to send
+     */
+    async handle_assistant_call(assistant_id, prompt, timeout) {
+        let assistant_response, timeout_id;
+    
+        try {
+            // Prompt the assistant with a timeout
+            assistant_response = await Promise.race([
+                this.prompt_assistant(assistant_id, prompt),
+                new Promise((_, reject) => {
+                    timeout_id = setTimeout(() => reject({ status: 'timeout', message: 'Request timed out.' }), timeout);
+                })
+            ]);
+        } 
+        catch (error) {
+            // Throw what to send based on status code
+            switch (error.status) {
+                case 'requires_action':
+                    throw { status: 400, to_send: { type: error.status, message: 'The run requires action.' } };
+                case 'expired':
+                    throw { status: 408, to_send: { type: error.status, message: 'The run has expired.' } };
+                case 'cancelling':
+                case 'cancelled':
+                    throw { status: 409, to_send: { type: error.status, message: 'The run has been cancelled.' } };
+                case 'failed':
+                    throw { status: 500, to_send: { type: error.status, message: 'The run has failed.' } };
+                case 'timeout':
+                    throw { status: 408, to_send: { type: error.status, message: `The run timed out after ${timeout/1000} seconds.` } };
+                default:
+                    throw { status: 500, to_send: { type: 'ServerError', message: error.message } };
+            }
+        }
+        finally {
+            // Ensure no open handles at function closing
+            clearTimeout(timeout_id);
+        }
+    
+        // Return assistant response
+        return assistant_response;
+    }
+};
+
+module.exports = AssistantUtils;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-client_app.html">client/app</a></li><li><a href="module-client_dashboard.html">client/dashboard</a></li><li><a href="module-client_home.html">client/home</a></li><li><a href="module-client_login.html">client/login</a></li><li><a href="module-client_navbar.html">client/navbar</a></li><li><a href="module-client_query.html">client/query</a></li><li><a href="module-client_signup.html">client/signup</a></li><li><a href="module-server_assistantUtils.html">server/assistantUtils</a></li><li><a href="module-server_routes.html">server/routes</a></li></ul><h3>Namespaces</h3><ul><li><a href="module-server_assistantUtils-AssistantUtils.html">AssistantUtils</a></li><li><a href="module-server_routes-Router.html">Router</a></li></ul><h3>Classes</h3><ul><li><a href="module-client_app.App.html">App</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.11</a> on Wed Mar 13 2024 22:11:16 GMT-0700 (Pacific Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

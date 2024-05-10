@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: client/src/pages/NavBar.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: client/src/pages/NavBar.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @module client/navbar
+ * @description Provides the NavBar component class
+ */
+
+import React, { useState } from 'react';
+import AppBar from '@mui/material/AppBar';
+import {Box, Container, Toolbar, Tooltip, Menu, MenuItem, Button, Slide, DialogActions} from '@mui/material';
+import {IconButton,ListItemIcon} from '@mui/material';
+import Typography from '@mui/material/Typography';
+import Avatar from '@mui/icons-material/AccountCircle';
+import useScrollTrigger from '@mui/material/useScrollTrigger';
+import LoadingButton from '@mui/lab/LoadingButton';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import DialogTitle from '@mui/material/DialogTitle';
+import Dialog from '@mui/material/Dialog';
+import TextField from '@mui/material/TextField';
+
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../redux/user';
+import { setUML, removeUML} from '../redux/uml';
+import { useNavigate, useLocation} from 'react-router-dom';
+import axios from 'axios';  
+
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import SaveIcon from '@mui/icons-material/Save';
+import { Logout } from '@mui/icons-material';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import firebase from '../firebase';
+
+function HideOnScroll(props) {
+    const { children} = props;
+    const trigger = useScrollTrigger();
+  
+    return (
+      &lt;Slide appear={false} direction="down" in={!trigger}>
+        {children}
+      &lt;/Slide>
+    );
+};
+
+/**
+ * The UserMenu component links to the Login and Signup pages if the user is not signed in, otherwise it features a collapsible menu which allows the user to visit his or her Dashboard, log out, or delete the account.
+ * @memberof module:client/navbar
+ */
+const UserMenu = () => {
+    const [anchorElUser, setAnchorElUser] = React.useState(null);
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const { uid } = useSelector((state) => state.user);
+    const [open, setOpen] = useState(false); 
+
+    const handleOpenUserMenu = (event) => {
+        setAnchorElUser(event.currentTarget);
+    };
+    const handleCloseUserMenu = () => {
+        setAnchorElUser(null);
+    };
+
+    const handleCloseDialog = (event) => {
+        setOpen(false);
+    };
+    const handleOpenDialog = () => {
+        setOpen(true);
+      };
+
+    function flogout() {
+        dispatch(logout());
+        firebase.auth().signOut();
+    };
+
+    const handleDashboardClick = () => {
+        dispatch(removeUML());
+        navigate("/dashboard");
+    };
+
+    const handleDeleteClick = async () => {
+        const body = {
+            uid: uid
+        };
+
+        if (firebase.auth().currentUser === null)
+        {
+            try {
+                await axios.post('http://localhost:4000/delete-account', body);
+            }
+            catch (error){}
+        }
+        else{
+            try {
+                await axios.post('http://localhost:4000/delete-google-account', body);
+            }
+            catch (error){}
+        }
+        dispatch(logout());
+        dispatch(removeUML());
+        firebase.auth().signOut();
+        window.location.href = '/'; //need to refresh page
+    };
+
+    const handleLoginClick = () => {
+        dispatch(removeUML());
+        navigate("/login");
+    };
+
+    const handleSignUpClick = () => {
+        dispatch(removeUML());
+        navigate("/signup");
+    };
+
+    if (uid !== null){
+        return (
+            &lt;Box sx={{ flexGrow: 0 }}>
+                &lt;Tooltip title="Open options">
+                    &lt;IconButton data-testid = 'usericon' onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                        &lt;Avatar fontSize ="large" sx={{color: '#FFFFFF'}} />
+                    &lt;/IconButton>
+                &lt;/Tooltip>
+                &lt;Menu
+                    sx={{ mt: '45px' }}
+                    id="menu-appbar"
+                    anchorEl={anchorElUser}
+                    anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                    }}
+                    keepMounted
+                    transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                    }}
+                    open={Boolean(anchorElUser)}
+                    onClose={handleCloseUserMenu}
+                >
+                &lt;MenuItem onClick={handleDashboardClick}>&lt;ListItemIcon >&lt;DashboardIcon/>&lt;/ListItemIcon>Dashboard &lt;/MenuItem>
+                &lt;MenuItem onClick={flogout}>&lt;ListItemIcon>&lt;Logout/>&lt;/ListItemIcon>Logout&lt;/MenuItem>
+                &lt;MenuItem onClick={handleOpenDialog}>&lt;ListItemIcon>&lt;DeleteIcon/>&lt;/ListItemIcon>Delete Account&lt;/MenuItem>
+                &lt;Dialog onClose={handleCloseDialog} open={open} fullWidth         
+                    sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    }}>
+                    &lt;DialogTitle>This will permanently delete your account&lt;/DialogTitle>
+                    &lt;DialogActions>
+                        &lt;Button onClick={handleDeleteClick}>Delete account&lt;/Button>
+                    &lt;/DialogActions>
+                &lt;/Dialog>
+                &lt;/Menu>
+            &lt;/Box>
+        );
+    }
+    else {
+        return (
+            
+            &lt;Box sx={{ flexGrow: 0 , display: 'flex'}}>
+                &lt;Button
+                key="Register"
+                onClick={handleSignUpClick}
+                sx={{ my: 2, mr: 1, color: 'white', display: 'block', fontWeight:600, fontSize:'1.2vmax'}}
+                >
+                Register
+                &lt;/Button>
+                &lt;Button
+                key="Log in"
+                onClick={handleLoginClick}
+                sx={{ my: 2, color: 'white', display: 'block', fontWeight:600, fontSize:'1.2vmax'}}
+                >
+                Log In
+                &lt;/Button>
+            &lt;/Box>
+        );
+    }
+};
+
+/**
+ * The PageButtons contain nothing when not on the query page. Otherwise, if not logged in, it contains a message saying you must sign in to save your diagram, and if logged in allows users to set a name, description, and privacy setting before saving the UML diagram.
+ * @memberof module:client/navbar
+ */
+const PageButtons = ({ IndependentPageButtons=null, umlText=null, diagram=null }) => {
+    const {state} = useLocation();
+
+    const { uid } = useSelector((state) => state.user);
+    const { uml_id } = useSelector((state) => state.uml);
+    const [nameText, setNameText] = useState(state &amp;&amp; state.name ? state.name: 'untitled');
+    const [privacy, setPrivacy] = useState(state &amp;&amp; state.privacy ? state.privacy: 'public');
+    const [descriptionText, setDescriptionText] = useState(state &amp;&amp; state.description ? state.description: '');
+    const dispatch = useDispatch();
+
+    const [open, setOpen] = useState(false);    //description dialog button
+    const [loadingb, setLoadingb] = useState(false); //save loading button state
+  
+    const handleNameChange = (event) => {
+        setNameText(event.target.value);
+    };
+
+    const handleDescriptionChange = (event) => {
+        setDescriptionText(event.target.value);
+    };
+  
+    const handleClickDescription = () => {
+      setOpen(true);
+    };
+  
+    const handleClose = (event) => {
+      setDescriptionText(descriptionText);
+      setOpen(false);
+    };
+
+    const handlePrivacyClick = (event, newPrivacy) => {
+        if (newPrivacy !== null) {
+            setPrivacy(newPrivacy);
+        }
+    };
+
+    const handleSaveClick = async () => {
+        setLoadingb(true);
+        const body = {
+          uml_id : uml_id,
+          uid: uid,
+          content: umlText,
+          privacy: privacy,
+          name: nameText,
+          description: descriptionText,
+          diagram: diagram
+        };
+
+        if (uid != null &amp;&amp; uml_id == null) { // if we are logged in but this is a new diagram
+          try {
+            const res = await axios.post('http://localhost:4000/create-new-uml', body);
+            dispatch(setUML(res.data));
+          }
+          catch(error)
+          {}
+        }
+        else if(uml_id != null) // if we know what uml we are changing
+        {
+          try {
+            await axios.post('http://localhost:4000/update-uml', body);
+          }
+          catch(error) {}
+        }
+        setLoadingb(false);
+    };
+
+    if(IndependentPageButtons === null){
+        return(
+            &lt;Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}/>
+        );
+    }
+    else if (IndependentPageButtons === "QueryPage" &amp;&amp; uid !== null) {
+        return(
+            &lt;Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'flex' ,lg:'flex'} }}>
+                &lt;TextField 
+                    sx={{ml:"8rem", mr:'5rem', input: {color: 'white'}}}
+                    onChange={handleNameChange}
+                    placeholder='Untitled'
+                    value={nameText}
+                    hiddenLabel
+                    variant="outlined"
+                    color="grey"
+                />
+                &lt;Button sx={{ mr:'5rem', color:'white', borderColor:'#135ba2', '&amp;:hover': {borderColor: 'black', backgroundColor: '#176cc1'},}} variant="outlined" onClick={handleClickDescription}>
+                    &lt;EditNoteIcon/>Description
+                &lt;/Button>
+                &lt;Dialog onClose={handleClose} open={open} 
+                    fullWidth         
+                    sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    }}>
+                    &lt;DialogTitle sx={{ my: "1rem"}}>UML Diagram Description&lt;/DialogTitle>
+                    &lt;TextField 
+                        onChange={handleDescriptionChange}
+                        value={descriptionText}
+                        label="Description..."
+                        multiline
+                    />
+                &lt;/Dialog>
+                &lt;ToggleButtonGroup sx={{ ml:'2rem', mr:'5rem'}}
+                    value={privacy}
+                    exclusive
+                    onChange={handlePrivacyClick}
+                    aria-label="UML Privacy"
+                    >
+                    &lt;Tooltip title="Public" arrow>&lt;ToggleButton value="public" aria-label="Public">
+                        &lt;VisibilityIcon />
+                    &lt;/ToggleButton>&lt;/Tooltip>
+                    &lt;Tooltip title="Private" arrow>&lt;ToggleButton value="private" aria-label="Private">
+                        &lt;VisibilityOffIcon />
+                    &lt;/ToggleButton>&lt;/Tooltip>
+                &lt;/ToggleButtonGroup>
+                &lt;LoadingButton
+                    onClick={handleSaveClick}
+                    loading={loadingb}
+                    loadingPosition="start"
+                    startIcon={&lt;SaveIcon />}
+                    variant="contained"
+                    >
+                    &lt;span>Save&lt;/span>
+                &lt;/LoadingButton>
+            &lt;/Box>
+        );
+    }
+    else if (IndependentPageButtons === "QueryPage" &amp;&amp; uid === null) {
+        return(
+            &lt;Box justifyContent={"center"} sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+                &lt;Typography fontSize={"1.5vmax"}>Log in to save your work&lt;/Typography>
+            &lt;/Box>
+        );
+    }
+};
+
+/**
+ * The NavBar contains the UML Lab name and logo, PageButtons, and UserMenu.
+ * @memberof module:client/navbar
+ */
+const NavBar = ({IndependentPageButtons=null, umlText=null, diagram=null}) => {
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    
+    const handleHomeClick = () => {
+        dispatch(removeUML());
+        navigate("/");
+    };
+
+    return (
+        &lt;HideOnScroll>
+            &lt;AppBar>
+                &lt;Container maxWidth="xl">
+                &lt;Toolbar disableGutters>
+                    &lt;Button
+                        variant='text'
+                        onClick = {handleHomeClick}
+                        style={{ color: "white" , fontSize: '1.3vmax', fontWeight: 650, letterSpacing: ".2vmax" }}
+                        > &lt;AccountTreeIcon sx={{ mr:"1rem" }} />
+                        UML Lab
+                    &lt;/Button>
+                    &lt;PageButtons IndependentPageButtons={IndependentPageButtons} umlText={umlText} diagram={diagram} />
+                    &lt;UserMenu />
+                &lt;/Toolbar>
+                &lt;/Container>
+            &lt;/AppBar>
+        &lt;/HideOnScroll>
+    );
+};
+
+export default NavBar;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-client_app.html">client/app</a></li><li><a href="module-client_dashboard.html">client/dashboard</a></li><li><a href="module-client_home.html">client/home</a></li><li><a href="module-client_login.html">client/login</a></li><li><a href="module-client_navbar.html">client/navbar</a></li><li><a href="module-client_query.html">client/query</a></li><li><a href="module-client_signup.html">client/signup</a></li><li><a href="module-server_assistantUtils.html">server/assistantUtils</a></li><li><a href="module-server_routes.html">server/routes</a></li></ul><h3>Namespaces</h3><ul><li><a href="module-server_assistantUtils-AssistantUtils.html">AssistantUtils</a></li><li><a href="module-server_routes-Router.html">Router</a></li></ul><h3>Classes</h3><ul><li><a href="module-client_app.App.html">App</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.11</a> on Wed Mar 13 2024 22:11:16 GMT-0700 (Pacific Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
