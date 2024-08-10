@@ -1,12 +1,4 @@
 # Installation
-To clone the repository
-1. Navigate to the repository homepage at https://github.com/julianaramos/CS130_Project
-2. Click the green code drop down menu located at the top of the page 
-![image](https://github.com/julianaramos/CS130_Project/assets/99143374/c0aa9816-0990-4cda-a5dd-eb8aae3922ad)
-3. Click the copy symbol to copy the repository URL to your clipboard  
-![image](https://github.com/julianaramos/CS130_Project/assets/99143374/463d6102-b0f4-4f9f-9564-16dd053694d0)
-4. Using the terminal of your choice, navigate to the directory where the project should be cloned
-5. Run the command `git clone <paste repository name>`
   
 To install dependencies
 1. Open a terminal instance
